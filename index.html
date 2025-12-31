@@ -23,10 +23,10 @@
         --text-0: #ffffff;
         --text-1: #b8b8c8;
         --text-2: #6e6e82;
-        --accent: #6366f1;
-        --accent-rgb: 99, 102, 241;
-        --accent-soft: rgba(99, 102, 241, 0.15);
-        --accent-hover: #818cf8;
+        --accent: #f0c75e;
+        --accent-rgb: 240, 199, 94;
+        --accent-soft: rgba(240, 199, 94, 0.15);
+        --accent-hover: #f3d483;
         --border: #2a2a3a;
         --success: #22c55e;
         --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
@@ -1880,8 +1880,8 @@
                   <div class="field">
                     <div class="field-label">Color</div>
                     <div class="color-field">
-                      <input type="color" id="strokeColor" value="#6366f1" />
-                      <input type="text" id="strokeHex" value="#6366f1" />
+                      <input type="color" id="strokeColor" value="#f0c75e" />
+                      <input type="text" id="strokeHex" value="#f0c75e" />
                     </div>
                   </div>
                 </div>
@@ -1976,8 +1976,8 @@
                     <div class="field">
                       <div class="field-label">Color</div>
                       <div class="color-field">
-                        <input type="color" id="fillColor" value="#6366f1" />
-                        <input type="text" id="fillHex" value="#6366f1" />
+                        <input type="color" id="fillColor" value="#f0c75e" />
+                        <input type="text" id="fillHex" value="#f0c75e" />
                       </div>
                     </div>
                   </div>
@@ -3142,7 +3142,7 @@
         initMobileSheet();
 
         // Initialize accent color
-        updateAccentColor("#6366f1");
+        updateAccentColor("#f0c75e");
         setPNGScale(pngScale);
         update();
       }
@@ -3545,9 +3545,9 @@
         document.getElementById("rotation").value = 0;
         document.getElementById("scale").value = 85;
         document.getElementById("resolution").value = 500;
-        document.getElementById("strokeColor").value = "#6366f1";
-        document.getElementById("strokeHex").value = "#6366f1";
-        updateAccentColor("#6366f1");
+        document.getElementById("strokeColor").value = "#f0c75e";
+        document.getElementById("strokeHex").value = "#f0c75e";
+        updateAccentColor("#f0c75e");
         document.getElementById("strokeColor2").value = "#ec4899";
         document.getElementById("strokeHex2").value = "#ec4899";
         document.getElementById("strokeWidth").value = 2;
@@ -3555,8 +3555,8 @@
         document.getElementById("lineCap").value = "round";
         document.getElementById("lineJoin").value = "round";
         document.getElementById("dashPattern").value = "";
-        document.getElementById("fillColor").value = "#6366f1";
-        document.getElementById("fillHex").value = "#6366f1";
+        document.getElementById("fillColor").value = "#f0c75e";
+        document.getElementById("fillHex").value = "#f0c75e";
         document.getElementById("fillOpacity").value = 15;
         document.getElementById("canvasWidth").value = 400;
         document.getElementById("canvasHeight").value = 400;
