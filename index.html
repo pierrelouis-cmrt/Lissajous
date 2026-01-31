@@ -7,7 +7,7 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <title>Lissajous Lab</title>
-    <script src="vendor/tweakpane.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tweakpane@3.1.10/dist/tweakpane.min.js"></script>
     <style>
       :root {
         --bg-color: #0b0f14;
@@ -540,15 +540,24 @@
 
       /* =========================================
          2. APP STATE & LOGIC
+         
+         Mathematical notation (from article):
+         - nx, ny: frequency ratio components (coprime integers)
+         - φ (phi): phase offset in degrees
+         - A: amplitude (controlled via scale %)
+         
+         Parametric equations:
+         X = A·sin(nx·t + φ)
+         Y = A·sin(ny·t)
          ========================================= */
 
       const PARAMS = {
         preset: "none",
-        freqA: 3,
-        freqB: 4,
-        phase: 0,
+        nx: 3, // frequency ratio component (X axis)
+        ny: 4, // frequency ratio component (Y axis)
+        phi: 0, // phase offset φ in degrees
         rotation: 0,
-        scale: 85,
+        scale: 85, // amplitude as percentage
         resolution: 500,
 
         strokeColor: "#f0c75e",
@@ -578,26 +587,27 @@
         webmDuration: 3,
       };
 
+      // Presets with nx:ny ratios (musical intervals noted in article)
       const PRESETS = {
-        classic: { a: 3, b: 2, p: 90 },
-        fish: { a: 3, b: 4, p: 0 },
-        knot: { a: 5, b: 4, p: 90 },
-        shield: { a: 3, b: 5, p: 45 },
-        wing: { a: 7, b: 6, p: 0 },
-        grid: { a: 10, b: 9, p: 0 },
+        classic: { nx: 3, ny: 2, phi: 90 }, // Perfect fifth (2:3)
+        fish: { nx: 3, ny: 4, phi: 0 }, // Perfect fourth (3:4)
+        knot: { nx: 5, ny: 4, phi: 90 }, // Major third (4:5)
+        shield: { nx: 3, ny: 5, phi: 45 },
+        wing: { nx: 7, ny: 6, phi: 0 },
+        grid: { nx: 10, ny: 9, phi: 0 },
       };
 
       let isAnimating = false;
       let animId = null;
-      let currentPhase = 0;
+      let currentPhi = 0; // current phase during animation
 
       function update() {
         const svg = document.getElementById("preview");
         const {
           width,
           height,
-          freqA,
-          freqB,
+          nx,
+          ny,
           rotation,
           scale,
           resolution,
@@ -617,17 +627,18 @@
         const cx = width / 2;
         const cy = height / 2;
         const maxRadius = Math.min(width, height) / 2 - strokeWidth - 2;
-        const amp = maxRadius * (scale / 100);
+        const amp = maxRadius * (scale / 100); // Amplitude A
 
-        const activePhase = isAnimating ? currentPhase : PARAMS.phase;
-        const phaseRad = (activePhase * Math.PI) / 180;
+        const activePhi = isAnimating ? currentPhi : PARAMS.phi;
+        const phiRad = (activePhi * Math.PI) / 180; // φ in radians
         const rotRad = (rotation * Math.PI) / 180;
 
+        // Parametric equations: X = A·sin(nx·t + φ), Y = A·sin(ny·t)
         let d = "M";
         for (let i = 0; i <= resolution; i++) {
           const t = (i / resolution) * Math.PI * 2;
-          const x = amp * Math.sin(freqA * t + phaseRad);
-          const y = amp * Math.sin(freqB * t);
+          const x = amp * Math.sin(nx * t + phiRad);
+          const y = amp * Math.sin(ny * t);
           const rx = x * Math.cos(rotRad) - y * Math.sin(rotRad);
           const ry = x * Math.sin(rotRad) + y * Math.cos(rotRad);
           d += `${(cx + rx).toFixed(2)},${(cy + ry).toFixed(2)} `;
@@ -677,7 +688,7 @@
 
       function animLoop() {
         if (!isAnimating) return;
-        currentPhase = (currentPhase + PARAMS.animSpeed) % 360;
+        currentPhi = (currentPhi + PARAMS.animSpeed) % 360;
         update();
         animId = requestAnimationFrame(animLoop);
       }
@@ -685,13 +696,13 @@
       function togglePlay() {
         isAnimating = !isAnimating;
         if (isAnimating) {
-          currentPhase = PARAMS.phase;
+          currentPhi = PARAMS.phi;
           playBtn.title = "Pause Animation";
           animLoop();
         } else {
           cancelAnimationFrame(animId);
           playBtn.title = "Play Animation";
-          PARAMS.phase = Math.round(currentPhase);
+          PARAMS.phi = Math.round(currentPhi);
           pane.refresh();
         }
       }
@@ -699,7 +710,7 @@
       /* =========================================
          3. RASTER RENDERER (Canvas 2D)
          ========================================= */
-      function renderToCanvas(ctx, phaseVal, w, h) {
+      function renderToCanvas(ctx, phiVal, w, h) {
         if (PARAMS.useBg) {
           ctx.fillStyle = PARAMS.bgColor;
           ctx.fillRect(0, 0, w, h);
@@ -707,8 +718,7 @@
           ctx.clearRect(0, 0, w, h);
         }
 
-        const { freqA, freqB, rotation, scale, resolution, strokeWidth } =
-          PARAMS;
+        const { nx, ny, rotation, scale, resolution, strokeWidth } = PARAMS;
 
         const cx = w / 2;
         const cy = h / 2;
@@ -717,14 +727,14 @@
         const maxRadius = Math.min(w, h) / 2 - actualStroke - 2 * ratio;
         const amp = maxRadius * (scale / 100);
 
-        const phaseRad = (phaseVal * Math.PI) / 180;
+        const phiRad = (phiVal * Math.PI) / 180;
         const rotRad = (rotation * Math.PI) / 180;
 
         ctx.beginPath();
         for (let i = 0; i <= resolution; i++) {
           const t = (i / resolution) * Math.PI * 2;
-          const x = amp * Math.sin(freqA * t + phaseRad);
-          const y = amp * Math.sin(freqB * t);
+          const x = amp * Math.sin(nx * t + phiRad);
+          const y = amp * Math.sin(ny * t);
           const rx = x * Math.cos(rotRad) - y * Math.sin(rotRad);
           const ry = x * Math.sin(rotRad) + y * Math.cos(rotRad);
           if (i === 0) ctx.moveTo(cx + rx, cy + ry);
@@ -797,43 +807,47 @@
         .on("change", (ev) => {
           if (ev.value !== "none") {
             const p = PRESETS[ev.value];
-            PARAMS.freqA = p.a;
-            PARAMS.freqB = p.b;
-            PARAMS.phase = p.p;
+            PARAMS.nx = p.nx;
+            PARAMS.ny = p.ny;
+            PARAMS.phi = p.phi;
             pane.refresh();
             if (!isAnimating) update();
           }
         });
       tabShape.addSeparator();
       tabShape
-        .addInput(PARAMS, "freqA", {
+        .addInput(PARAMS, "nx", {
           min: 1,
           max: 20,
           step: 1,
-          label: "Freq A",
+          label: "nₓ (Freq X)",
         })
         .on("change", update);
       tabShape
-        .addInput(PARAMS, "freqB", {
+        .addInput(PARAMS, "ny", {
           min: 1,
           max: 20,
           step: 1,
-          label: "Freq B",
+          label: "nᵧ (Freq Y)",
         })
         .on("change", update);
       tabShape
-        .addInput(PARAMS, "phase", { min: 0, max: 360, label: "Phase" })
+        .addInput(PARAMS, "phi", { min: 0, max: 360, label: "φ (Phase)°" })
         .on("change", (ev) => {
           if (!isAnimating) {
-            currentPhase = ev.value;
+            currentPhi = ev.value;
             update();
           }
         });
       tabShape
-        .addInput(PARAMS, "rotation", { min: 0, max: 360, label: "Rotation" })
+        .addInput(PARAMS, "rotation", { min: 0, max: 360, label: "Rotation°" })
         .on("change", update);
       tabShape
-        .addInput(PARAMS, "scale", { min: 10, max: 100, label: "Scale %" })
+        .addInput(PARAMS, "scale", {
+          min: 10,
+          max: 100,
+          label: "A (Amplitude) %",
+        })
         .on("change", update);
       tabShape
         .addInput(PARAMS, "resolution", {
@@ -846,9 +860,9 @@
 
       const btnRand = tabShape.addButton({ title: "Randomize Shape" });
       btnRand.on("click", () => {
-        PARAMS.freqA = Math.ceil(Math.random() * 10);
-        PARAMS.freqB = Math.ceil(Math.random() * 10);
-        PARAMS.phase = Math.floor(Math.random() * 360);
+        PARAMS.nx = Math.ceil(Math.random() * 10);
+        PARAMS.ny = Math.ceil(Math.random() * 10);
+        PARAMS.phi = Math.floor(Math.random() * 360);
         PARAMS.preset = "none";
         pane.refresh();
         update();
@@ -954,9 +968,9 @@
       tabCanvas.addSeparator();
       const btnReset = tabCanvas.addButton({ title: "Reset Defaults" });
       btnReset.on("click", () => {
-        PARAMS.freqA = 3;
-        PARAMS.freqB = 4;
-        PARAMS.phase = 0;
+        PARAMS.nx = 3;
+        PARAMS.ny = 4;
+        PARAMS.phi = 0;
         PARAMS.scale = 85;
         PARAMS.strokeColor = "#f0c75e";
         PARAMS.bgColor = "#08080c";
@@ -1007,7 +1021,7 @@
         cvs.height = PARAMS.height * scale;
         renderToCanvas(
           cvs.getContext("2d"),
-          isAnimating ? currentPhase : PARAMS.phase,
+          isAnimating ? currentPhi : PARAMS.phi,
           cvs.width,
           cvs.height,
         );
@@ -1047,13 +1061,13 @@
         const encoder = new GIFEncoder(cvs.width, cvs.height);
         encoder.setDelay(1000 / PARAMS.gifFps);
 
-        const startP = PARAMS.phase;
+        const startPhi = PARAMS.phi;
 
         for (let i = 0; i < totalFrames; i++) {
           btnGif.title = `Rendering ${Math.round((i / totalFrames) * 100)}%`;
           await new Promise((r) => setTimeout(r, 0));
 
-          const p = (startP + (i / totalFrames) * 360) % 360;
+          const p = (startPhi + (i / totalFrames) * 360) % 360;
           renderToCanvas(ctx, p, cvs.width, cvs.height);
           encoder.addFrame(ctx);
         }
@@ -1103,7 +1117,7 @@
         };
 
         recorder.start();
-        const startP = PARAMS.phase;
+        const startPhi = PARAMS.phi;
         const duration = PARAMS.webmDuration * 1000;
         const startT = performance.now();
 
@@ -1116,7 +1130,7 @@
           const prog = elapsed / duration;
           btnWebm.title = `Rec: ${Math.round(prog * 100)}%`;
 
-          const p = (startP + prog * 360) % 360;
+          const p = (startPhi + prog * 360) % 360;
           renderToCanvas(ctx, p, cvs.width, cvs.height);
           requestAnimationFrame(recLoop);
         }
@@ -1130,6 +1144,10 @@
 
       /* =========================================
          5. 3D KNOT MODE
+         
+         Each face has its own Lissajous curve with:
+         - nx, ny: frequency ratio for that plane
+         - φ (phi): phase offset
          ========================================= */
       const knotCanvas = document.getElementById("knotCanvas");
       const knotCtx = knotCanvas.getContext("2d");
@@ -1140,6 +1158,7 @@
       });
       pane3d.element.classList.add("pane-3d");
       pane3d.hidden = true;
+
       const KNOT_PARAMS = {
         resolution: 720,
         radius: 0.78,
@@ -1157,23 +1176,26 @@
         showXZ: true,
         showYZ: true,
 
-        xyFreqA: 3,
-        xyFreqB: 2,
-        xyPhase: 0,
+        // XY face parameters
+        xyNx: 3,
+        xyNy: 2,
+        xyPhi: 0,
         xyRotation: 0,
         xyScale: 1,
         xyColor: "#7dd3fc",
 
-        xzFreqA: 4,
-        xzFreqB: 3,
-        xzPhase: 90,
+        // XZ face parameters
+        xzNx: 4,
+        xzNy: 3,
+        xzPhi: 90,
         xzRotation: 0,
         xzScale: 1,
         xzColor: "#fca5a5",
 
-        yzFreqA: 5,
-        yzFreqB: 4,
-        yzPhase: 45,
+        // YZ face parameters
+        yzNx: 5,
+        yzNy: 4,
+        yzPhi: 45,
         yzRotation: 0,
         yzScale: 1,
         yzColor: "#c4b5fd",
@@ -1277,15 +1299,16 @@
         offset = { x: 0, y: 0, z: 0 },
       ) {
         const points = [];
-        const phase = toRad(cfg.phase);
+        const phi = toRad(cfg.phi); // phase φ
         const rotation = toRad(cfg.rotation);
         const cosR = Math.cos(rotation);
         const sinR = Math.sin(rotation);
 
         for (let i = 0; i <= resolution; i++) {
           const t = (i / resolution) * Math.PI * 2;
-          const a = Math.sin(cfg.freqA * t + phase) * base * cfg.scale;
-          const b = Math.sin(cfg.freqB * t) * base * cfg.scale;
+          // Parametric: a = sin(nx·t + φ), b = sin(ny·t)
+          const a = Math.sin(cfg.nx * t + phi) * base * cfg.scale;
+          const b = Math.sin(cfg.ny * t) * base * cfg.scale;
 
           if (plane === "xy") {
             const x = a * cosR - b * sinR;
@@ -1441,9 +1464,9 @@
         const xyCore = buildCurvePoints(
           "xy",
           {
-            freqA: KNOT_PARAMS.xyFreqA,
-            freqB: KNOT_PARAMS.xyFreqB,
-            phase: KNOT_PARAMS.xyPhase,
+            nx: KNOT_PARAMS.xyNx,
+            ny: KNOT_PARAMS.xyNy,
+            phi: KNOT_PARAMS.xyPhi,
             rotation: KNOT_PARAMS.xyRotation,
             scale: KNOT_PARAMS.xyScale,
           },
@@ -1454,9 +1477,9 @@
         const xzCore = buildCurvePoints(
           "xz",
           {
-            freqA: KNOT_PARAMS.xzFreqA,
-            freqB: KNOT_PARAMS.xzFreqB,
-            phase: KNOT_PARAMS.xzPhase,
+            nx: KNOT_PARAMS.xzNx,
+            ny: KNOT_PARAMS.xzNy,
+            phi: KNOT_PARAMS.xzPhi,
             rotation: KNOT_PARAMS.xzRotation,
             scale: KNOT_PARAMS.xzScale,
           },
@@ -1467,9 +1490,9 @@
         const yzCore = buildCurvePoints(
           "yz",
           {
-            freqA: KNOT_PARAMS.yzFreqA,
-            freqB: KNOT_PARAMS.yzFreqB,
-            phase: KNOT_PARAMS.yzPhase,
+            nx: KNOT_PARAMS.yzNx,
+            ny: KNOT_PARAMS.yzNy,
+            phi: KNOT_PARAMS.yzPhi,
             rotation: KNOT_PARAMS.yzRotation,
             scale: KNOT_PARAMS.yzScale,
           },
@@ -1480,9 +1503,9 @@
         const xy = buildCurvePoints(
           "xy",
           {
-            freqA: KNOT_PARAMS.xyFreqA,
-            freqB: KNOT_PARAMS.xyFreqB,
-            phase: KNOT_PARAMS.xyPhase,
+            nx: KNOT_PARAMS.xyNx,
+            ny: KNOT_PARAMS.xyNy,
+            phi: KNOT_PARAMS.xyPhi,
             rotation: KNOT_PARAMS.xyRotation,
             scale: KNOT_PARAMS.xyScale,
           },
@@ -1494,9 +1517,9 @@
         const xz = buildCurvePoints(
           "xz",
           {
-            freqA: KNOT_PARAMS.xzFreqA,
-            freqB: KNOT_PARAMS.xzFreqB,
-            phase: KNOT_PARAMS.xzPhase,
+            nx: KNOT_PARAMS.xzNx,
+            ny: KNOT_PARAMS.xzNy,
+            phi: KNOT_PARAMS.xzPhi,
             rotation: KNOT_PARAMS.xzRotation,
             scale: KNOT_PARAMS.xzScale,
           },
@@ -1508,9 +1531,9 @@
         const yz = buildCurvePoints(
           "yz",
           {
-            freqA: KNOT_PARAMS.yzFreqA,
-            freqB: KNOT_PARAMS.yzFreqB,
-            phase: KNOT_PARAMS.yzPhase,
+            nx: KNOT_PARAMS.yzNx,
+            ny: KNOT_PARAMS.yzNy,
+            phi: KNOT_PARAMS.yzPhi,
             rotation: KNOT_PARAMS.yzRotation,
             scale: KNOT_PARAMS.yzScale,
           },
@@ -1594,133 +1617,137 @@
 
         const [tabCurves, tabKnot, tabView] = tabs3d.pages;
 
-        const fXY = tabCurves.addFolder({ title: "XY Face" });
+        // XY Face controls
+        const fXY = tabCurves.addFolder({ title: "XY Face (Blue)" });
         fXY
-          .addInput(KNOT_PARAMS, "xyFreqA", {
+          .addInput(KNOT_PARAMS, "xyNx", {
             min: 1,
             max: 12,
             step: 1,
-            label: "Freq A",
+            label: "nₓ (Freq X)",
           })
           .on("change", drawKnotScene);
         fXY
-          .addInput(KNOT_PARAMS, "xyFreqB", {
+          .addInput(KNOT_PARAMS, "xyNy", {
             min: 1,
             max: 12,
             step: 1,
-            label: "Freq B",
+            label: "nᵧ (Freq Y)",
           })
           .on("change", drawKnotScene);
         fXY
-          .addInput(KNOT_PARAMS, "xyPhase", {
+          .addInput(KNOT_PARAMS, "xyPhi", {
             min: 0,
             max: 360,
-            label: "Phase",
+            label: "φ (Phase)°",
           })
           .on("change", drawKnotScene);
         fXY
           .addInput(KNOT_PARAMS, "xyRotation", {
             min: 0,
             max: 360,
-            label: "Rotate",
+            label: "Rotation°",
           })
           .on("change", drawKnotScene);
         fXY
           .addInput(KNOT_PARAMS, "xyScale", {
             min: 0.5,
             max: 1.4,
-            label: "Scale",
+            label: "A (Scale)",
           })
           .on("change", drawKnotScene);
         fXY
           .addInput(KNOT_PARAMS, "xyColor", { label: "Color" })
           .on("change", drawKnotScene);
 
-        const fXZ = tabCurves.addFolder({ title: "XZ Face" });
+        // XZ Face controls
+        const fXZ = tabCurves.addFolder({ title: "XZ Face (Red)" });
         fXZ
-          .addInput(KNOT_PARAMS, "xzFreqA", {
+          .addInput(KNOT_PARAMS, "xzNx", {
             min: 1,
             max: 12,
             step: 1,
-            label: "Freq A",
+            label: "nₓ (Freq X)",
           })
           .on("change", drawKnotScene);
         fXZ
-          .addInput(KNOT_PARAMS, "xzFreqB", {
+          .addInput(KNOT_PARAMS, "xzNy", {
             min: 1,
             max: 12,
             step: 1,
-            label: "Freq B",
+            label: "nᵧ (Freq Z)",
           })
           .on("change", drawKnotScene);
         fXZ
-          .addInput(KNOT_PARAMS, "xzPhase", {
+          .addInput(KNOT_PARAMS, "xzPhi", {
             min: 0,
             max: 360,
-            label: "Phase",
+            label: "φ (Phase)°",
           })
           .on("change", drawKnotScene);
         fXZ
           .addInput(KNOT_PARAMS, "xzRotation", {
             min: 0,
             max: 360,
-            label: "Rotate",
+            label: "Rotation°",
           })
           .on("change", drawKnotScene);
         fXZ
           .addInput(KNOT_PARAMS, "xzScale", {
             min: 0.5,
             max: 1.4,
-            label: "Scale",
+            label: "A (Scale)",
           })
           .on("change", drawKnotScene);
         fXZ
           .addInput(KNOT_PARAMS, "xzColor", { label: "Color" })
           .on("change", drawKnotScene);
 
-        const fYZ = tabCurves.addFolder({ title: "YZ Face" });
+        // YZ Face controls
+        const fYZ = tabCurves.addFolder({ title: "YZ Face (Purple)" });
         fYZ
-          .addInput(KNOT_PARAMS, "yzFreqA", {
+          .addInput(KNOT_PARAMS, "yzNx", {
             min: 1,
             max: 12,
             step: 1,
-            label: "Freq A",
+            label: "nₓ (Freq Y)",
           })
           .on("change", drawKnotScene);
         fYZ
-          .addInput(KNOT_PARAMS, "yzFreqB", {
+          .addInput(KNOT_PARAMS, "yzNy", {
             min: 1,
             max: 12,
             step: 1,
-            label: "Freq B",
+            label: "nᵧ (Freq Z)",
           })
           .on("change", drawKnotScene);
         fYZ
-          .addInput(KNOT_PARAMS, "yzPhase", {
+          .addInput(KNOT_PARAMS, "yzPhi", {
             min: 0,
             max: 360,
-            label: "Phase",
+            label: "φ (Phase)°",
           })
           .on("change", drawKnotScene);
         fYZ
           .addInput(KNOT_PARAMS, "yzRotation", {
             min: 0,
             max: 360,
-            label: "Rotate",
+            label: "Rotation°",
           })
           .on("change", drawKnotScene);
         fYZ
           .addInput(KNOT_PARAMS, "yzScale", {
             min: 0.5,
             max: 1.4,
-            label: "Scale",
+            label: "A (Scale)",
           })
           .on("change", drawKnotScene);
         fYZ
           .addInput(KNOT_PARAMS, "yzColor", { label: "Color" })
           .on("change", drawKnotScene);
 
-        const fKnot = tabKnot.addFolder({ title: "Knot" });
+        // Knot controls
+        const fKnot = tabKnot.addFolder({ title: "Knot Appearance" });
         fKnot
           .addInput(KNOT_PARAMS, "knotBlend", {
             min: 0,
@@ -1753,12 +1780,13 @@
           .addInput(KNOT_PARAMS, "knotColor", { label: "Color" })
           .on("change", drawKnotScene);
 
+        // Scene controls
         const fScene = tabView.addFolder({ title: "Scene" });
         fScene
           .addInput(KNOT_PARAMS, "radius", {
             min: 0.5,
             max: 1.1,
-            label: "Radius",
+            label: "Size",
           })
           .on("change", drawKnotScene);
         fScene
@@ -1780,32 +1808,33 @@
           .addInput(KNOT_PARAMS, "curveWidth", {
             min: 0.5,
             max: 4,
-            label: "Curve W",
+            label: "Curve Width",
           })
           .on("change", drawKnotScene);
         fScene
           .addInput(KNOT_PARAMS, "planeOpacity", {
             min: 0,
             max: 0.6,
-            label: "Cube Op",
+            label: "Cube Opacity",
           })
           .on("change", drawKnotScene);
 
+        // Visibility controls
         const fVis = tabView.addFolder({ title: "Visibility" });
         fVis
-          .addInput(KNOT_PARAMS, "showKnot", { label: "Knot" })
+          .addInput(KNOT_PARAMS, "showKnot", { label: "Show Knot" })
           .on("change", drawKnotScene);
         fVis
-          .addInput(KNOT_PARAMS, "showXY", { label: "XY Face" })
+          .addInput(KNOT_PARAMS, "showXY", { label: "Show XY Face" })
           .on("change", drawKnotScene);
         fVis
-          .addInput(KNOT_PARAMS, "showXZ", { label: "XZ Face" })
+          .addInput(KNOT_PARAMS, "showXZ", { label: "Show XZ Face" })
           .on("change", drawKnotScene);
         fVis
-          .addInput(KNOT_PARAMS, "showYZ", { label: "YZ Face" })
+          .addInput(KNOT_PARAMS, "showYZ", { label: "Show YZ Face" })
           .on("change", drawKnotScene);
 
-        const resetBtn = tabView.addButton({ title: "Reset View" });
+        const resetBtn = tabView.addButton({ title: "Reset Camera" });
         resetBtn.on("click", () => {
           resetKnotView();
           pane3d.refresh();
