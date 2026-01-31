@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -6,21 +6,35 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
-    <title>Lissajous Lab - Tweakpane Edition</title>
-    <script src="https://cdn.jsdelivr.net/npm/tweakpane@3.1.9/dist/tweakpane.min.js"></script>
+    <title>Lissajous Lab</title>
+    <script src="vendor/tweakpane.min.js"></script>
     <style>
       :root {
-        --bg-color: #08080c;
-        --bg-pattern: #16161f;
+        --bg-color: #0b0f14;
+        --bg-pattern: #18202b;
         --accent: #f0c75e;
+        --accent-dim: rgba(240, 199, 94, 0.15);
+        --text-color: #e2e8f0;
+        --text-muted: rgba(226, 232, 240, 0.5);
+        --panel-bg: rgba(11, 15, 20, 0.85);
+        --panel-border: rgba(148, 163, 184, 0.3);
+        --stage-bg: transparent;
+        --hud-color: rgba(226, 232, 240, 0.55);
         --preview-size: 400px;
       }
 
       @media (prefers-color-scheme: light) {
         :root {
-          --bg-color: #f0f1f5;
-          --bg-pattern: #dcdde5;
-          --accent: #f0c75e;
+          --bg-color: #f7f8fb;
+          --bg-pattern: #dbe1eb;
+          --accent: #b0891b;
+          --accent-dim: rgba(176, 137, 27, 0.12);
+          --text-color: #1f2937;
+          --text-muted: rgba(31, 41, 55, 0.5);
+          --panel-bg: rgba(255, 255, 255, 0.9);
+          --panel-border: rgba(148, 163, 184, 0.5);
+          --stage-bg: transparent;
+          --hud-color: rgba(31, 41, 55, 0.5);
         }
       }
 
@@ -31,15 +45,13 @@
       }
 
       body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          sans-serif;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         background-color: var(--bg-color);
+        color: var(--text-color);
         height: 100vh;
         width: 100vw;
         overflow: hidden;
-        display: flex;
-        justify-content: center;
-        align-items: center;
         transition: background-color 0.3s ease;
       }
 
@@ -47,12 +59,18 @@
       .canvas-bg {
         position: absolute;
         inset: 0;
-        background-image: radial-gradient(
-          circle at 1px 1px,
-          var(--bg-pattern) 1px,
-          transparent 0
-        );
-        background-size: 24px 24px;
+        background-image:
+          linear-gradient(
+            to right,
+            rgba(255, 255, 255, 0.04) 1px,
+            transparent 1px
+          ),
+          linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.04) 1px,
+            transparent 1px
+          );
+        background-size: 28px 28px;
         z-index: 0;
       }
 
@@ -60,15 +78,160 @@
       .canvas-wrapper {
         position: relative;
         z-index: 1;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
         border-radius: 4px;
-        /* Canvas background is handled by SVG/Canvas logic, this is just the frame */
         transition: transform 0.2s;
         display: flex;
         justify-content: center;
         align-items: center;
         width: min(var(--preview-size), 90vmin);
         aspect-ratio: 1 / 1;
+      }
+
+      .mode-stage {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+      }
+
+      .mode-view {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.35s ease;
+      }
+
+      body[data-mode="2d"] #mode2d,
+      body[data-mode="3d"] #mode3d {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      /* Mode Navigation - Refined */
+      .mode-nav {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        z-index: 160;
+        display: inline-flex;
+        gap: 2px;
+        padding: 3px;
+        background: var(--panel-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+      }
+
+      .mode-btn {
+        position: relative;
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        padding: 8px 14px;
+        border-radius: 7px;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+
+      .mode-btn:hover:not(.is-active) {
+        color: var(--text-color);
+        background: var(--accent-dim);
+      }
+
+      .mode-btn.is-active {
+        background: var(--accent);
+        color: #0b0f14;
+        font-weight: 600;
+      }
+
+      .mode-btn:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      /* 3D Knot Stage - Simplified */
+      .knot-stage {
+        position: relative;
+        width: min(78vmin, 740px);
+        aspect-ratio: 1 / 1;
+        display: grid;
+        place-items: center;
+        border-radius: 4px;
+        background: transparent;
+        overflow: hidden;
+      }
+
+      #knotCanvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        position: relative;
+        z-index: 1;
+        touch-action: none;
+        border-radius: 4px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+      }
+
+      /* HUD - Fixed to bottom left */
+      .knot-hud {
+        position: fixed;
+        left: 16px;
+        bottom: 16px;
+        z-index: 100;
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--hud-color);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-family: "SF Mono", "Fira Code", "Roboto Mono", monospace;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      body[data-mode="3d"] .knot-hud {
+        opacity: 1;
+      }
+
+      .knot-hud-hint {
+        opacity: 0.6;
+        font-size: 9px;
+      }
+
+      .knot-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 10px;
+      }
+
+      .knot-legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        opacity: 0.8;
+      }
+
+      .legend-dot {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--legend-color);
       }
 
       #preview {
@@ -85,10 +248,11 @@
         left: auto;
         width: 300px !important;
         max-width: 90vw;
-        z-index: 100;
+        z-index: 9999 !important;
         max-height: calc(100vh - 20px);
         overflow-y: auto;
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35),
+        box-shadow:
+          0 16px 40px rgba(0, 0, 0, 0.35),
           0 1px 0 rgba(255, 255, 255, 0.04);
         border-radius: 6px;
         transform: none;
@@ -103,7 +267,6 @@
         touch-action: manipulation;
       }
 
-      /* Scrollbar for Tweakpane content if it gets too tall */
       .tp-dfwv::-webkit-scrollbar {
         width: 6px;
       }
@@ -114,9 +277,24 @@
 
       @media (max-width: 600px) {
         body {
-          align-items: flex-end;
           padding-bottom: 24px;
         }
+
+        .mode-nav {
+          left: 50%;
+          top: auto;
+          bottom: max(18px, env(safe-area-inset-bottom));
+          transform: translateX(-50%);
+        }
+
+        .knot-hud {
+          left: 50%;
+          bottom: max(70px, calc(env(safe-area-inset-bottom) + 56px));
+          transform: translateX(-50%);
+          align-items: center;
+          text-align: center;
+        }
+
         .tp-dfwv {
           top: 12px;
           top: max(12px, env(safe-area-inset-top));
@@ -127,25 +305,84 @@
           border-radius: 10px;
           max-height: calc(100vh - 24px);
           max-height: calc(
-            100svh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+            100svh - 24px - env(safe-area-inset-top) -
+              env(safe-area-inset-bottom)
           );
           max-height: calc(
-            100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+            100dvh - 24px - env(safe-area-inset-top) -
+              env(safe-area-inset-bottom)
           );
           transform: translateX(-50%);
         }
         .canvas-wrapper {
           transform: none;
         }
+
+        .knot-stage {
+          width: min(88vmin, 520px);
+        }
       }
     </style>
   </head>
-  <body>
+  <body data-mode="2d">
     <div class="canvas-bg"></div>
 
-    <div class="canvas-wrapper">
-      <svg id="preview" width="400" height="400"></svg>
+    <nav class="mode-nav" aria-label="Mode switcher">
+      <button
+        class="mode-btn is-active"
+        type="button"
+        data-mode="2d"
+        aria-pressed="true"
+      >
+        2D
+      </button>
+      <button
+        class="mode-btn"
+        type="button"
+        data-mode="3d"
+        aria-pressed="false"
+      >
+        3D
+      </button>
+    </nav>
+
+    <!-- HUD moved outside mode views for fixed positioning -->
+    <div class="knot-hud">
+      <div class="knot-legend">
+        <span style="--legend-color: #7dd3fc">
+          <i class="legend-dot"></i> XY
+        </span>
+        <span style="--legend-color: #fca5a5">
+          <i class="legend-dot"></i> XZ
+        </span>
+        <span style="--legend-color: #c4b5fd">
+          <i class="legend-dot"></i> YZ
+        </span>
+        <span style="--legend-color: #f0c75e">
+          <i class="legend-dot"></i> Knot
+        </span>
+      </div>
+      <div class="knot-hud-hint">
+        Drag to rotate · Scroll to zoom · R to reset
+      </div>
     </div>
+
+    <main class="mode-stage">
+      <section id="mode2d" class="mode-view" aria-label="2D mode">
+        <div class="canvas-wrapper">
+          <svg id="preview" width="400" height="400"></svg>
+        </div>
+      </section>
+
+      <section id="mode3d" class="mode-view" aria-label="3D mode">
+        <div class="knot-stage">
+          <canvas id="knotCanvas"></canvas>
+        </div>
+      </section>
+    </main>
+
+    <div id="pane2d"></div>
+    <div id="pane3d"></div>
 
     <canvas id="renderCanvas" style="display: none"></canvas>
 
@@ -172,7 +409,6 @@
           const palette = new Uint8Array(256 * 3);
           const colors = new Map();
           for (let i = 0; i < data.length; i += 4) {
-            // Skip transparent pixels for simple quantization
             if (data[i + 3] === 0) continue;
             const key = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
             colors.set(key, (colors.get(key) || 0) + 1);
@@ -181,10 +417,8 @@
             .sort((a, b) => b[1] - a[1])
             .slice(0, 255);
 
-          // Index 0 is reserved for transparency
           const transparentIdx = 0;
 
-          // Fill palette
           let pIdx = 1;
           sorted.forEach(([c]) => {
             palette[pIdx * 3] = (c >> 16) & 255;
@@ -204,7 +438,6 @@
             const r = data[i],
               g = data[i + 1],
               b = data[i + 2];
-            // Simple Euclidean distance
             for (let j = 1; j < pIdx; j++) {
               const dr = palette[j * 3] - r;
               const dg = palette[j * 3 + 1] - g;
@@ -225,13 +458,11 @@
           const writeStr = (s) =>
             [...s].forEach((c) => bytes.push(c.charCodeAt(0)));
 
-          // Header
           writeStr("GIF89a");
           write(this.width & 255, this.width >> 8);
           write(this.height & 255, this.height >> 8);
-          write(0xf7, 0, 0); // Global Color Table Flag
+          write(0xf7, 0, 0);
 
-          // Use first frame's palette for Global Table (Simplified)
           if (this.frames.length > 0) {
             for (let i = 0; i < 256 * 3; i++)
               write(this.frames[0].palette[i] || 0);
@@ -239,35 +470,31 @@
             for (let i = 0; i < 256 * 3; i++) write(0);
           }
 
-          // Netscape Loop Extension
           write(0x21, 0xff, 0x0b);
           writeStr("NETSCAPE2.0");
           write(0x03, 0x01, 0x00, 0x00, 0x00);
 
           for (const frame of this.frames) {
-            // GCE (Graphic Control Extension)
             write(0x21, 0xf9, 0x04);
-            write(0x09); // Disposal (1) + Transparency Flag (1) -> 00001001
+            write(0x09);
             write((this.delay / 10) & 255, (this.delay / 10) >> 8);
-            write(0x00); // Transparent Color Index
-            write(0x00); // Terminator
+            write(0x00);
+            write(0x00);
 
-            // Image Descriptor
             write(0x2c, 0, 0, 0, 0);
             write(this.width & 255, this.width >> 8);
             write(this.height & 255, this.height >> 8);
-            write(0x00); // Local Color Table Flag (0)
+            write(0x00);
 
-            // Image Data (LZW)
             const lzw = this.lzwEncode(frame.indexed, 8);
-            write(8); // LZW Min Code Size
+            write(8);
             for (let i = 0; i < lzw.length; i += 255) {
               const chunk = lzw.slice(i, i + 255);
               write(chunk.length, ...chunk);
             }
             write(0x00);
           }
-          write(0x3b); // Trailer
+          write(0x3b);
           return new Uint8Array(bytes);
         }
         lzwEncode(data, minCodeSize) {
@@ -316,7 +543,6 @@
          ========================================= */
 
       const PARAMS = {
-        // Shape
         preset: "none",
         freqA: 3,
         freqB: 4,
@@ -325,7 +551,6 @@
         scale: 85,
         resolution: 500,
 
-        // Style
         strokeColor: "#f0c75e",
         strokeWidth: 2,
         strokeOpacity: 100,
@@ -342,14 +567,11 @@
         useBg: false,
         bgColor: "#08080c",
 
-        // Canvas
         width: 400,
         height: 400,
         linkDims: true,
-        // Animation
         animSpeed: 1,
 
-        // Export
         pngScale: 2,
         gifDuration: 2,
         gifFps: 24,
@@ -367,9 +589,8 @@
 
       let isAnimating = false;
       let animId = null;
-      let currentPhase = 0; // The actual phase used during animation loop
+      let currentPhase = 0;
 
-      // --- SVG UPDATE LOGIC ---
       function update() {
         const svg = document.getElementById("preview");
         const {
@@ -386,7 +607,7 @@
         const previewSize = Math.min(width, height);
         document.documentElement.style.setProperty(
           "--preview-size",
-          `${previewSize}px`
+          `${previewSize}px`,
         );
 
         svg.setAttribute("width", width);
@@ -407,14 +628,12 @@
           const t = (i / resolution) * Math.PI * 2;
           const x = amp * Math.sin(freqA * t + phaseRad);
           const y = amp * Math.sin(freqB * t);
-          // 2D Rotation
           const rx = x * Math.cos(rotRad) - y * Math.sin(rotRad);
           const ry = x * Math.sin(rotRad) + y * Math.cos(rotRad);
           d += `${(cx + rx).toFixed(2)},${(cy + ry).toFixed(2)} `;
         }
-        d += PARAMS.useFill ? "Z" : ""; // Close path if filled for better visuals, else open
+        d += PARAMS.useFill ? "Z" : "";
 
-        // Defs for gradient
         let defs = "";
         let strokeAttr = PARAMS.strokeColor;
         if (PARAMS.useGradient) {
@@ -472,7 +691,6 @@
         } else {
           cancelAnimationFrame(animId);
           playBtn.title = "Play Animation";
-          // Sync slider back
           PARAMS.phase = Math.round(currentPhase);
           pane.refresh();
         }
@@ -480,10 +698,8 @@
 
       /* =========================================
          3. RASTER RENDERER (Canvas 2D)
-         Used for PNG, GIF, WebM export
          ========================================= */
       function renderToCanvas(ctx, phaseVal, w, h) {
-        // Clear
         if (PARAMS.useBg) {
           ctx.fillStyle = PARAMS.bgColor;
           ctx.fillRect(0, 0, w, h);
@@ -496,8 +712,6 @@
 
         const cx = w / 2;
         const cy = h / 2;
-        // Adjust maxRadius based on scale of canvas vs base 400
-        // We calculate ratio to scale stroke width appropriately
         const ratio = w / PARAMS.width;
         const actualStroke = strokeWidth * ratio;
         const maxRadius = Math.min(w, h) / 2 - actualStroke - 2 * ratio;
@@ -520,11 +734,10 @@
         if (PARAMS.useFill) {
           ctx.fillStyle = PARAMS.fillColor;
           ctx.globalAlpha = PARAMS.fillOpacity / 100;
-          ctx.fill(); // Auto closes
+          ctx.fill();
           ctx.globalAlpha = 1;
         }
 
-        // Stroke
         if (PARAMS.useGradient) {
           const grad = ctx.createLinearGradient(0, 0, w, h);
           grad.addColorStop(0, PARAMS.strokeColor);
@@ -552,9 +765,12 @@
       /* =========================================
          4. TWEAKPANE SETUP
          ========================================= */
-      const pane = new Tweakpane.Pane({ title: "Lissajous Lab" });
+      const pane = new Tweakpane.Pane({
+        title: "Lissajous Lab",
+      });
+      pane.element.classList.add("pane-2d");
+      pane.hidden = false;
 
-      // -- TABS --
       const tabs = pane.addTab({
         pages: [
           { title: "Shape" },
@@ -566,7 +782,6 @@
 
       const [tabShape, tabStyle, tabCanvas, tabExport] = tabs.pages;
 
-      // -- TAB 1: SHAPE --
       tabShape
         .addInput(PARAMS, "preset", {
           options: {
@@ -639,7 +854,6 @@
         update();
       });
 
-      // -- TAB 2: STYLE --
       const fStroke = tabStyle.addFolder({ title: "Stroke" });
       fStroke
         .addInput(PARAMS, "strokeColor", { label: "Color" })
@@ -724,7 +938,6 @@
       });
       iBgCol.on("change", update);
 
-      // -- TAB 3: CANVAS --
       tabCanvas
         .addInput(PARAMS, "width", { min: 50, max: 2000, step: 10 })
         .on("change", (ev) => {
@@ -751,9 +964,6 @@
         update();
       });
 
-      // -- TAB 4: EXPORT --
-
-      // Utils
       function tempTitle(btn, msg, orig) {
         btn.title = msg;
         setTimeout(() => {
@@ -766,7 +976,6 @@
         return new XMLSerializer().serializeToString(svg);
       }
 
-      // 1. Vector
       const fVec = tabExport.addFolder({ title: "SVG (Vector)" });
       const btnSvgD = fVec.addButton({ title: "Download SVG" });
       btnSvgD.on("click", () => {
@@ -785,7 +994,6 @@
         tempTitle(btnSvgC, "Copied!", "Copy SVG Code");
       });
 
-      // 2. Bitmap
       const fBit = tabExport.addFolder({ title: "PNG (Bitmap)" });
       fBit.addInput(PARAMS, "pngScale", {
         options: { "1x": 1, "2x": 2, "4x": 4 },
@@ -801,7 +1009,7 @@
           cvs.getContext("2d"),
           isAnimating ? currentPhase : PARAMS.phase,
           cvs.width,
-          cvs.height
+          cvs.height,
         );
 
         cvs.toBlob((blob) => {
@@ -815,7 +1023,6 @@
         });
       });
 
-      // 3. Animation
       const fAni = tabExport.addFolder({ title: "Animation" });
       fAni.addInput(PARAMS, "gifDuration", {
         min: 0.5,
@@ -842,10 +1049,8 @@
 
         const startP = PARAMS.phase;
 
-        // Render Loop
         for (let i = 0; i < totalFrames; i++) {
           btnGif.title = `Rendering ${Math.round((i / totalFrames) * 100)}%`;
-          // Allow UI update
           await new Promise((r) => setTimeout(r, 0));
 
           const p = (startP + (i / totalFrames) * 360) % 360;
@@ -918,14 +1123,793 @@
         recLoop();
       });
 
-      // -- GLOBAL FOOTER --
       pane.addSeparator();
       pane.addInput(PARAMS, "animSpeed", { min: 0.1, max: 5, label: "Speed" });
       const playBtn = pane.addButton({ title: "Play Animation" });
       playBtn.on("click", togglePlay);
 
+      /* =========================================
+         5. 3D KNOT MODE
+         ========================================= */
+      const knotCanvas = document.getElementById("knotCanvas");
+      const knotCtx = knotCanvas.getContext("2d");
+      const knotStage = document.querySelector(".knot-stage");
+      const modeButtons = Array.from(document.querySelectorAll(".mode-btn"));
+      const pane3d = new Tweakpane.Pane({
+        title: "Knot Composer",
+      });
+      pane3d.element.classList.add("pane-3d");
+      pane3d.hidden = true;
+      const KNOT_PARAMS = {
+        resolution: 720,
+        radius: 0.78,
+        knotBlend: 0.5,
+        knotWidth: 2.2,
+        knotOpacity: 0.85,
+        knotGlow: 0.2,
+        knotColor: "#f0c75e",
+
+        curveWidth: 1.1,
+        planeOpacity: 0.22,
+
+        showKnot: true,
+        showXY: true,
+        showXZ: true,
+        showYZ: true,
+
+        xyFreqA: 3,
+        xyFreqB: 2,
+        xyPhase: 0,
+        xyRotation: 0,
+        xyScale: 1,
+        xyColor: "#7dd3fc",
+
+        xzFreqA: 4,
+        xzFreqB: 3,
+        xzPhase: 90,
+        xzRotation: 0,
+        xzScale: 1,
+        xzColor: "#fca5a5",
+
+        yzFreqA: 5,
+        yzFreqB: 4,
+        yzPhase: 45,
+        yzRotation: 0,
+        yzScale: 1,
+        yzColor: "#c4b5fd",
+
+        perspective: 1.35,
+      };
+
+      const knotView = {
+        rotX: 0.55,
+        rotY: -0.6,
+        rotZ: 0,
+      };
+
+      const knotState = {
+        active: false,
+        dragging: false,
+        lastX: 0,
+        lastY: 0,
+        size: 0,
+        dpr: window.devicePixelRatio || 1,
+      };
+
+      function toRad(deg) {
+        return (deg * Math.PI) / 180;
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function lerp(a, b, t) {
+        return a + (b - a) * t;
+      }
+
+      function hexToRgb(hex) {
+        const cleaned = hex.replace("#", "");
+        const full =
+          cleaned.length === 3
+            ? cleaned
+                .split("")
+                .map((c) => c + c)
+                .join("")
+            : cleaned;
+        const num = parseInt(full, 16);
+        return {
+          r: (num >> 16) & 255,
+          g: (num >> 8) & 255,
+          b: num & 255,
+        };
+      }
+
+      function rgba(hex, alpha) {
+        const { r, g, b } = hexToRgb(hex);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+
+      function getViewCache() {
+        return {
+          cosX: Math.cos(knotView.rotX),
+          sinX: Math.sin(knotView.rotX),
+          cosY: Math.cos(knotView.rotY),
+          sinY: Math.sin(knotView.rotY),
+          cosZ: Math.cos(knotView.rotZ),
+          sinZ: Math.sin(knotView.rotZ),
+        };
+      }
+
+      function applyView(point, view) {
+        let { x, y, z } = point;
+
+        let y1 = y * view.cosX - z * view.sinX;
+        let z1 = y * view.sinX + z * view.cosX;
+        y = y1;
+        z = z1;
+
+        let x1 = x * view.cosY + z * view.sinY;
+        z1 = -x * view.sinY + z * view.cosY;
+        x = x1;
+        z = z1;
+
+        x1 = x * view.cosZ - y * view.sinZ;
+        y1 = x * view.sinZ + y * view.cosZ;
+
+        return { x: x1, y: y1, z };
+      }
+
+      function projectPoint(point, cx, cy, fov) {
+        const scale = fov / (fov + point.z);
+        return {
+          x: cx + point.x * scale,
+          y: cy + point.y * scale,
+          depth: point.z,
+        };
+      }
+
+      function buildCurvePoints(
+        plane,
+        cfg,
+        base,
+        resolution,
+        offset = { x: 0, y: 0, z: 0 },
+      ) {
+        const points = [];
+        const phase = toRad(cfg.phase);
+        const rotation = toRad(cfg.rotation);
+        const cosR = Math.cos(rotation);
+        const sinR = Math.sin(rotation);
+
+        for (let i = 0; i <= resolution; i++) {
+          const t = (i / resolution) * Math.PI * 2;
+          const a = Math.sin(cfg.freqA * t + phase) * base * cfg.scale;
+          const b = Math.sin(cfg.freqB * t) * base * cfg.scale;
+
+          if (plane === "xy") {
+            const x = a * cosR - b * sinR;
+            const y = a * sinR + b * cosR;
+            points.push({ x: x + offset.x, y: y + offset.y, z: offset.z });
+          } else if (plane === "xz") {
+            const x = a * cosR - b * sinR;
+            const z = a * sinR + b * cosR;
+            points.push({ x: x + offset.x, y: offset.y, z: z + offset.z });
+          } else {
+            const y = a * cosR - b * sinR;
+            const z = a * sinR + b * cosR;
+            points.push({ x: offset.x, y: y + offset.y, z: z + offset.z });
+          }
+        }
+
+        return points;
+      }
+
+      function buildKnotPoints(xy, xz, yz) {
+        const blend = KNOT_PARAMS.knotBlend;
+        const points = [];
+        const count = Math.min(xy.length, xz.length, yz.length);
+        for (let i = 0; i < count; i++) {
+          const pxy = xy[i];
+          const pxz = xz[i];
+          const pyz = yz[i];
+          points.push({
+            x: lerp(pxy.x, pxz.x, blend),
+            y: lerp(pxy.y, pyz.y, blend),
+            z: lerp(pxz.z, pyz.z, blend),
+          });
+        }
+        return points;
+      }
+
+      function drawLine3D(p1, p2, color, width, view, cx, cy, fov) {
+        const a = projectPoint(applyView(p1, view), cx, cy, fov);
+        const b = projectPoint(applyView(p2, view), cx, cy, fov);
+        knotCtx.strokeStyle = color;
+        knotCtx.lineWidth = width;
+        knotCtx.beginPath();
+        knotCtx.moveTo(a.x, a.y);
+        knotCtx.lineTo(b.x, b.y);
+        knotCtx.stroke();
+      }
+
+      function drawCube(half, view, cx, cy, fov) {
+        if (KNOT_PARAMS.planeOpacity <= 0) return;
+        const color = `rgba(148, 163, 184, ${KNOT_PARAMS.planeOpacity})`;
+        const corners = [
+          { x: -half, y: -half, z: -half },
+          { x: half, y: -half, z: -half },
+          { x: half, y: half, z: -half },
+          { x: -half, y: half, z: -half },
+          { x: -half, y: -half, z: half },
+          { x: half, y: -half, z: half },
+          { x: half, y: half, z: half },
+          { x: -half, y: half, z: half },
+        ];
+        const edges = [
+          [0, 1],
+          [1, 2],
+          [2, 3],
+          [3, 0],
+          [4, 5],
+          [5, 6],
+          [6, 7],
+          [7, 4],
+          [0, 4],
+          [1, 5],
+          [2, 6],
+          [3, 7],
+        ];
+        edges.forEach(([a, b]) => {
+          drawLine3D(corners[a], corners[b], color, 1, view, cx, cy, fov);
+        });
+      }
+
+      function drawCurve(points, color, width, view, cx, cy, fov, alpha) {
+        knotCtx.strokeStyle = rgba(color, alpha);
+        knotCtx.lineWidth = width;
+        knotCtx.beginPath();
+        points.forEach((point, index) => {
+          const projected = projectPoint(applyView(point, view), cx, cy, fov);
+          if (index === 0) knotCtx.moveTo(projected.x, projected.y);
+          else knotCtx.lineTo(projected.x, projected.y);
+        });
+        knotCtx.stroke();
+      }
+
+      function drawKnot(points, base, view, cx, cy, fov) {
+        const rgb = hexToRgb(KNOT_PARAMS.knotColor);
+        const drawPass = (widthScale, alphaScale, lighten) => {
+          if (lighten) {
+            knotCtx.globalCompositeOperation = "lighter";
+          }
+          for (let i = 1; i < points.length; i++) {
+            const p0 = applyView(points[i - 1], view);
+            const p1 = applyView(points[i], view);
+            const depth =
+              clamp((p0.z + p1.z) / (2 * base * 1.2), -1, 1) * 0.5 + 0.5;
+            const width = KNOT_PARAMS.knotWidth * widthScale * (0.6 + depth);
+            const alpha =
+              KNOT_PARAMS.knotOpacity * alphaScale * (0.35 + depth * 0.65);
+
+            const a = projectPoint(p0, cx, cy, fov);
+            const b = projectPoint(p1, cx, cy, fov);
+            knotCtx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+            knotCtx.lineWidth = width;
+            knotCtx.beginPath();
+            knotCtx.moveTo(a.x, a.y);
+            knotCtx.lineTo(b.x, b.y);
+            knotCtx.stroke();
+          }
+          knotCtx.globalCompositeOperation = "source-over";
+        };
+
+        if (KNOT_PARAMS.knotGlow > 0.05) {
+          drawPass(1.8 + KNOT_PARAMS.knotGlow, 0.18, true);
+        }
+        drawPass(1, 1, false);
+      }
+
+      function drawKnotScene() {
+        if (!knotState.size) return;
+        const size = knotState.size;
+        const curveAmp = size * 0.26 * KNOT_PARAMS.radius;
+        const cubeHalf = curveAmp * 1.15;
+        const cx = size / 2;
+        const cy = size / 2;
+        const fov = size * KNOT_PARAMS.perspective;
+        const view = getViewCache();
+
+        knotCtx.setTransform(knotState.dpr, 0, 0, knotState.dpr, 0, 0);
+        knotCtx.lineJoin = "round";
+        knotCtx.lineCap = "round";
+        knotCtx.clearRect(0, 0, size, size);
+
+        // Use CSS background color
+        const computedStyle = getComputedStyle(document.documentElement);
+        const bgColor =
+          computedStyle.getPropertyValue("--bg-color").trim() || "#0b0f14";
+        knotCtx.fillStyle = bgColor;
+        knotCtx.fillRect(0, 0, size, size);
+
+        const faceOffset = {
+          xy: { x: 0, y: 0, z: cubeHalf },
+          xz: { x: 0, y: cubeHalf, z: 0 },
+          yz: { x: cubeHalf, y: 0, z: 0 },
+        };
+
+        const xyCore = buildCurvePoints(
+          "xy",
+          {
+            freqA: KNOT_PARAMS.xyFreqA,
+            freqB: KNOT_PARAMS.xyFreqB,
+            phase: KNOT_PARAMS.xyPhase,
+            rotation: KNOT_PARAMS.xyRotation,
+            scale: KNOT_PARAMS.xyScale,
+          },
+          curveAmp,
+          KNOT_PARAMS.resolution,
+        );
+
+        const xzCore = buildCurvePoints(
+          "xz",
+          {
+            freqA: KNOT_PARAMS.xzFreqA,
+            freqB: KNOT_PARAMS.xzFreqB,
+            phase: KNOT_PARAMS.xzPhase,
+            rotation: KNOT_PARAMS.xzRotation,
+            scale: KNOT_PARAMS.xzScale,
+          },
+          curveAmp,
+          KNOT_PARAMS.resolution,
+        );
+
+        const yzCore = buildCurvePoints(
+          "yz",
+          {
+            freqA: KNOT_PARAMS.yzFreqA,
+            freqB: KNOT_PARAMS.yzFreqB,
+            phase: KNOT_PARAMS.yzPhase,
+            rotation: KNOT_PARAMS.yzRotation,
+            scale: KNOT_PARAMS.yzScale,
+          },
+          curveAmp,
+          KNOT_PARAMS.resolution,
+        );
+
+        const xy = buildCurvePoints(
+          "xy",
+          {
+            freqA: KNOT_PARAMS.xyFreqA,
+            freqB: KNOT_PARAMS.xyFreqB,
+            phase: KNOT_PARAMS.xyPhase,
+            rotation: KNOT_PARAMS.xyRotation,
+            scale: KNOT_PARAMS.xyScale,
+          },
+          curveAmp,
+          KNOT_PARAMS.resolution,
+          faceOffset.xy,
+        );
+
+        const xz = buildCurvePoints(
+          "xz",
+          {
+            freqA: KNOT_PARAMS.xzFreqA,
+            freqB: KNOT_PARAMS.xzFreqB,
+            phase: KNOT_PARAMS.xzPhase,
+            rotation: KNOT_PARAMS.xzRotation,
+            scale: KNOT_PARAMS.xzScale,
+          },
+          curveAmp,
+          KNOT_PARAMS.resolution,
+          faceOffset.xz,
+        );
+
+        const yz = buildCurvePoints(
+          "yz",
+          {
+            freqA: KNOT_PARAMS.yzFreqA,
+            freqB: KNOT_PARAMS.yzFreqB,
+            phase: KNOT_PARAMS.yzPhase,
+            rotation: KNOT_PARAMS.yzRotation,
+            scale: KNOT_PARAMS.yzScale,
+          },
+          curveAmp,
+          KNOT_PARAMS.resolution,
+          faceOffset.yz,
+        );
+
+        if (KNOT_PARAMS.showXY || KNOT_PARAMS.showXZ || KNOT_PARAMS.showYZ) {
+          drawCube(cubeHalf, view, cx, cy, fov);
+        }
+
+        if (KNOT_PARAMS.showXY) {
+          drawCurve(
+            xy,
+            KNOT_PARAMS.xyColor,
+            KNOT_PARAMS.curveWidth,
+            view,
+            cx,
+            cy,
+            fov,
+            0.75,
+          );
+        }
+
+        if (KNOT_PARAMS.showXZ) {
+          drawCurve(
+            xz,
+            KNOT_PARAMS.xzColor,
+            KNOT_PARAMS.curveWidth,
+            view,
+            cx,
+            cy,
+            fov,
+            0.75,
+          );
+        }
+
+        if (KNOT_PARAMS.showYZ) {
+          drawCurve(
+            yz,
+            KNOT_PARAMS.yzColor,
+            KNOT_PARAMS.curveWidth,
+            view,
+            cx,
+            cy,
+            fov,
+            0.75,
+          );
+        }
+
+        if (KNOT_PARAMS.showKnot) {
+          const knot = buildKnotPoints(xyCore, xzCore, yzCore);
+          drawKnot(knot, curveAmp, view, cx, cy, fov);
+        }
+      }
+
+      function resizeKnotCanvas() {
+        const rect = knotStage.getBoundingClientRect();
+        const size = Math.min(rect.width, rect.height);
+        if (!size) return;
+        knotState.size = size;
+        knotState.dpr = window.devicePixelRatio || 1;
+        knotCanvas.width = size * knotState.dpr;
+        knotCanvas.height = size * knotState.dpr;
+        knotCanvas.style.width = `${size}px`;
+        knotCanvas.style.height = `${size}px`;
+      }
+
+      function resetKnotView() {
+        knotView.rotX = 0.55;
+        knotView.rotY = -0.6;
+        knotView.rotZ = 0;
+        drawKnotScene();
+      }
+
+      function setupKnotPanel() {
+        const tabs3d = pane3d.addTab({
+          pages: [{ title: "Curves" }, { title: "Knot" }, { title: "View" }],
+        });
+
+        const [tabCurves, tabKnot, tabView] = tabs3d.pages;
+
+        const fXY = tabCurves.addFolder({ title: "XY Face" });
+        fXY
+          .addInput(KNOT_PARAMS, "xyFreqA", {
+            min: 1,
+            max: 12,
+            step: 1,
+            label: "Freq A",
+          })
+          .on("change", drawKnotScene);
+        fXY
+          .addInput(KNOT_PARAMS, "xyFreqB", {
+            min: 1,
+            max: 12,
+            step: 1,
+            label: "Freq B",
+          })
+          .on("change", drawKnotScene);
+        fXY
+          .addInput(KNOT_PARAMS, "xyPhase", {
+            min: 0,
+            max: 360,
+            label: "Phase",
+          })
+          .on("change", drawKnotScene);
+        fXY
+          .addInput(KNOT_PARAMS, "xyRotation", {
+            min: 0,
+            max: 360,
+            label: "Rotate",
+          })
+          .on("change", drawKnotScene);
+        fXY
+          .addInput(KNOT_PARAMS, "xyScale", {
+            min: 0.5,
+            max: 1.4,
+            label: "Scale",
+          })
+          .on("change", drawKnotScene);
+        fXY
+          .addInput(KNOT_PARAMS, "xyColor", { label: "Color" })
+          .on("change", drawKnotScene);
+
+        const fXZ = tabCurves.addFolder({ title: "XZ Face" });
+        fXZ
+          .addInput(KNOT_PARAMS, "xzFreqA", {
+            min: 1,
+            max: 12,
+            step: 1,
+            label: "Freq A",
+          })
+          .on("change", drawKnotScene);
+        fXZ
+          .addInput(KNOT_PARAMS, "xzFreqB", {
+            min: 1,
+            max: 12,
+            step: 1,
+            label: "Freq B",
+          })
+          .on("change", drawKnotScene);
+        fXZ
+          .addInput(KNOT_PARAMS, "xzPhase", {
+            min: 0,
+            max: 360,
+            label: "Phase",
+          })
+          .on("change", drawKnotScene);
+        fXZ
+          .addInput(KNOT_PARAMS, "xzRotation", {
+            min: 0,
+            max: 360,
+            label: "Rotate",
+          })
+          .on("change", drawKnotScene);
+        fXZ
+          .addInput(KNOT_PARAMS, "xzScale", {
+            min: 0.5,
+            max: 1.4,
+            label: "Scale",
+          })
+          .on("change", drawKnotScene);
+        fXZ
+          .addInput(KNOT_PARAMS, "xzColor", { label: "Color" })
+          .on("change", drawKnotScene);
+
+        const fYZ = tabCurves.addFolder({ title: "YZ Face" });
+        fYZ
+          .addInput(KNOT_PARAMS, "yzFreqA", {
+            min: 1,
+            max: 12,
+            step: 1,
+            label: "Freq A",
+          })
+          .on("change", drawKnotScene);
+        fYZ
+          .addInput(KNOT_PARAMS, "yzFreqB", {
+            min: 1,
+            max: 12,
+            step: 1,
+            label: "Freq B",
+          })
+          .on("change", drawKnotScene);
+        fYZ
+          .addInput(KNOT_PARAMS, "yzPhase", {
+            min: 0,
+            max: 360,
+            label: "Phase",
+          })
+          .on("change", drawKnotScene);
+        fYZ
+          .addInput(KNOT_PARAMS, "yzRotation", {
+            min: 0,
+            max: 360,
+            label: "Rotate",
+          })
+          .on("change", drawKnotScene);
+        fYZ
+          .addInput(KNOT_PARAMS, "yzScale", {
+            min: 0.5,
+            max: 1.4,
+            label: "Scale",
+          })
+          .on("change", drawKnotScene);
+        fYZ
+          .addInput(KNOT_PARAMS, "yzColor", { label: "Color" })
+          .on("change", drawKnotScene);
+
+        const fKnot = tabKnot.addFolder({ title: "Knot" });
+        fKnot
+          .addInput(KNOT_PARAMS, "knotBlend", {
+            min: 0,
+            max: 1,
+            label: "Blend",
+          })
+          .on("change", drawKnotScene);
+        fKnot
+          .addInput(KNOT_PARAMS, "knotWidth", {
+            min: 0.5,
+            max: 6,
+            label: "Width",
+          })
+          .on("change", drawKnotScene);
+        fKnot
+          .addInput(KNOT_PARAMS, "knotOpacity", {
+            min: 0.1,
+            max: 1,
+            label: "Opacity",
+          })
+          .on("change", drawKnotScene);
+        fKnot
+          .addInput(KNOT_PARAMS, "knotGlow", {
+            min: 0,
+            max: 1,
+            label: "Glow",
+          })
+          .on("change", drawKnotScene);
+        fKnot
+          .addInput(KNOT_PARAMS, "knotColor", { label: "Color" })
+          .on("change", drawKnotScene);
+
+        const fScene = tabView.addFolder({ title: "Scene" });
+        fScene
+          .addInput(KNOT_PARAMS, "radius", {
+            min: 0.5,
+            max: 1.1,
+            label: "Radius",
+          })
+          .on("change", drawKnotScene);
+        fScene
+          .addInput(KNOT_PARAMS, "perspective", {
+            min: 0.9,
+            max: 2.2,
+            label: "Perspective",
+          })
+          .on("change", drawKnotScene);
+        fScene
+          .addInput(KNOT_PARAMS, "resolution", {
+            min: 200,
+            max: 1400,
+            step: 50,
+            label: "Points",
+          })
+          .on("change", drawKnotScene);
+        fScene
+          .addInput(KNOT_PARAMS, "curveWidth", {
+            min: 0.5,
+            max: 4,
+            label: "Curve W",
+          })
+          .on("change", drawKnotScene);
+        fScene
+          .addInput(KNOT_PARAMS, "planeOpacity", {
+            min: 0,
+            max: 0.6,
+            label: "Cube Op",
+          })
+          .on("change", drawKnotScene);
+
+        const fVis = tabView.addFolder({ title: "Visibility" });
+        fVis
+          .addInput(KNOT_PARAMS, "showKnot", { label: "Knot" })
+          .on("change", drawKnotScene);
+        fVis
+          .addInput(KNOT_PARAMS, "showXY", { label: "XY Face" })
+          .on("change", drawKnotScene);
+        fVis
+          .addInput(KNOT_PARAMS, "showXZ", { label: "XZ Face" })
+          .on("change", drawKnotScene);
+        fVis
+          .addInput(KNOT_PARAMS, "showYZ", { label: "YZ Face" })
+          .on("change", drawKnotScene);
+
+        const resetBtn = tabView.addButton({ title: "Reset View" });
+        resetBtn.on("click", () => {
+          resetKnotView();
+          pane3d.refresh();
+        });
+      }
+
+      function setupKnotInteractions() {
+        knotCanvas.addEventListener("pointerdown", (event) => {
+          knotState.dragging = true;
+          knotState.lastX = event.clientX;
+          knotState.lastY = event.clientY;
+          knotCanvas.setPointerCapture(event.pointerId);
+        });
+
+        knotCanvas.addEventListener("pointermove", (event) => {
+          if (!knotState.dragging) return;
+          const dx = event.clientX - knotState.lastX;
+          const dy = event.clientY - knotState.lastY;
+          knotState.lastX = event.clientX;
+          knotState.lastY = event.clientY;
+          knotView.rotY -= dx * 0.005;
+          knotView.rotX += dy * 0.005;
+          drawKnotScene();
+        });
+
+        const endDrag = (event) => {
+          if (!knotState.dragging) return;
+          knotState.dragging = false;
+          if (knotCanvas.hasPointerCapture(event.pointerId)) {
+            knotCanvas.releasePointerCapture(event.pointerId);
+          }
+        };
+
+        knotCanvas.addEventListener("pointerup", endDrag);
+        knotCanvas.addEventListener("pointerleave", endDrag);
+        knotCanvas.addEventListener("pointercancel", endDrag);
+
+        knotCanvas.addEventListener(
+          "wheel",
+          (event) => {
+            event.preventDefault();
+            const delta = event.deltaY > 0 ? -0.05 : 0.05;
+            KNOT_PARAMS.radius = clamp(KNOT_PARAMS.radius + delta, 0.45, 1.2);
+            pane3d.refresh();
+            drawKnotScene();
+          },
+          { passive: false },
+        );
+
+        document.addEventListener("keydown", (event) => {
+          if (!knotState.active) return;
+          if (event.key.toLowerCase() === "r") {
+            resetKnotView();
+          }
+        });
+
+        if ("ResizeObserver" in window) {
+          const observer = new ResizeObserver(() => {
+            resizeKnotCanvas();
+            drawKnotScene();
+          });
+          observer.observe(knotStage);
+        } else {
+          window.addEventListener("resize", () => {
+            resizeKnotCanvas();
+            drawKnotScene();
+          });
+        }
+      }
+
+      function setMode(mode) {
+        document.body.dataset.mode = mode;
+        modeButtons.forEach((btn) => {
+          const isActive = btn.dataset.mode === mode;
+          btn.classList.toggle("is-active", isActive);
+          btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+        });
+
+        knotState.active = mode === "3d";
+        pane.hidden = knotState.active;
+        pane3d.hidden = !knotState.active;
+        pane.element.style.display = knotState.active ? "none" : "block";
+        pane3d.element.style.display = knotState.active ? "block" : "none";
+        if (knotState.active) {
+          pane3d.refresh();
+          resizeKnotCanvas();
+          drawKnotScene();
+        } else {
+          pane.refresh();
+        }
+      }
+
+      function initKnotMode() {
+        setupKnotPanel();
+        setupKnotInteractions();
+        modeButtons.forEach((btn) => {
+          btn.addEventListener("click", () => setMode(btn.dataset.mode));
+        });
+      }
+
       // Init
       update();
+      initKnotMode();
+      setMode("2d");
     </script>
   </body>
 </html>
