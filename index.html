@@ -27,14 +27,14 @@
         :root {
           --bg-color: #f7f8fb;
           --bg-pattern: #dbe1eb;
-          --accent: #b0891b;
-          --accent-dim: rgba(176, 137, 27, 0.12);
+          --accent: #e4b54b;
+          --accent-dim: rgba(228, 181, 75, 0.18);
           --text-color: #1f2937;
           --text-muted: rgba(31, 41, 55, 0.5);
           --panel-bg: rgba(255, 255, 255, 0.9);
           --panel-border: rgba(148, 163, 184, 0.5);
           --stage-bg: transparent;
-          --hud-color: rgba(31, 41, 55, 0.5);
+          --hud-color: rgba(31, 41, 55, 0.72);
         }
       }
 
@@ -775,11 +775,13 @@
       /* =========================================
          4. TWEAKPANE SETUP
          ========================================= */
+      const isCompactPane = window.matchMedia("(max-width: 600px)").matches;
       const pane = new Tweakpane.Pane({
         title: "Lissajous Lab",
       });
       pane.element.classList.add("pane-2d");
       pane.hidden = false;
+      pane.expanded = !isCompactPane;
 
       const tabs = pane.addTab({
         pages: [
@@ -1158,6 +1160,7 @@
       });
       pane3d.element.classList.add("pane-3d");
       pane3d.hidden = true;
+      pane3d.expanded = !isCompactPane;
 
       const KNOT_PARAMS = {
         resolution: 720,
